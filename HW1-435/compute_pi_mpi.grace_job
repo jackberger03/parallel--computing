@@ -19,25 +19,21 @@
 #
 module load intel             # load Intel software stack 
 #
-echo "Processes = 1"
-mpirun -np  1 ./compute_pi_mpi.exe 10000000000
-echo "Processes = 4"
-mpirun -np  4 ./compute_pi_mpi.exe 10000000000
-echo "Processes = 8"
-mpirun -np  8 ./compute_pi_mpi.exe 10000000000
-echo "Processes = 16"
-mpirun -np 16 ./compute_pi_mpi.exe 10000000000
-echo "Processes = 32"
-mpirun -np 32 ./compute_pi_mpi.exe 10000000000
 echo "Processes = 64"
-mpirun -np 64 ./compute_pi_mpi.exe 10000000000
+mpirun -np 64 ./compute_pi_mpi.exe 100000000
 echo "Processes = 64"
-mpirun -np 64 ./compute_pi_mpi.exe 1000000000
+mpirun -np 64 ./compute_pi_mpi.exe 1000000
 echo "Processes = 64"
-mpirun -np 64 ./compute_pi_mpi.exe 10000000
+mpirun -np 64 ./compute_pi_mpi.exe 10000
 echo "Processes = 64"
-mpirun -np 64 ./compute_pi_mpi.exe 100000
-echo "Processes = 64"
-mpirun -np 64 ./compute_pi_mpi.exe 1000
+mpirun -np 64 ./compute_pi_mpi.exe 100
 
+echo "Processes = 1"
+mpirun -np 1 ./compute_pi_mpi.exe 100000000
+echo "Processes = 1"
+mpirun -np 1 ./compute_pi_mpi.exe 1000000
+echo "Processes = 1"
+mpirun -np 1 ./compute_pi_mpi.exe 10000
+echo "Processes = 1"
+mpirun -np 1 ./compute_pi_mpi.exe 100
 
