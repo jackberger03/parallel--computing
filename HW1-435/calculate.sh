@@ -1,88 +1,76 @@
-# Create separate batch files for each ntasks-per-node configuration
+# Extended Experiment 6: Test higher ntasks-per-node values
 
-# File 1: exp6_ntasks1.grace_job
-cat > exp6_ntasks1.grace_job << 'EOF'
+# File 1: exp6_ntasks16.grace_job
+cat > exp6_ntasks16.grace_job << 'EOF'
 #!/bin/bash
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
-#SBATCH --job-name=MPI_Exp6_ntasks1
+#SBATCH --job-name=MPI_Exp6_ntasks16
 #SBATCH --time=0:30:00
-#SBATCH --nodes=64
-#SBATCH --ntasks-per-node=1
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=16
 #SBATCH --mem=8G
-#SBATCH --output=exp6_ntasks1_output.%j
+#SBATCH --output=exp6_ntasks16_output.%j
 
 module load intel
 mpiicx -o compute_pi_mpi.exe compute_pi_mpi.c
 
-echo "=== Experiment 6: ntasks-per-node=1 (64 nodes) ==="
+echo "=== Experiment 6: ntasks-per-node=16 (4 nodes) ==="
 echo "n = 10000000000, p = 64"
 mpirun -np 64 ./compute_pi_mpi.exe 10000000000
 EOF
 
-# File 2: exp6_ntasks2.grace_job
-cat > exp6_ntasks2.grace_job << 'EOF'
+# File 2: exp6_ntasks32.grace_job  
+cat > exp6_ntasks32.grace_job << 'EOF'
 #!/bin/bash
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
-#SBATCH --job-name=MPI_Exp6_ntasks2
+#SBATCH --job-name=MPI_Exp6_ntasks32
 #SBATCH --time=0:30:00
-#SBATCH --nodes=32
-#SBATCH --ntasks-per-node=2
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=32
 #SBATCH --mem=8G
-#SBATCH --output=exp6_ntasks2_output.%j
+#SBATCH --output=exp6_ntasks32_output.%j
 
 module load intel
 mpiicx -o compute_pi_mpi.exe compute_pi_mpi.c
 
-echo "=== Experiment 6: ntasks-per-node=2 (32 nodes) ==="
+echo "=== Experiment 6: ntasks-per-node=32 (2 nodes) ==="
 echo "n = 10000000000, p = 64"
 mpirun -np 64 ./compute_pi_mpi.exe 10000000000
 EOF
 
-# File 3: exp6_ntasks4.grace_job
-cat > exp6_ntasks4.grace_job << 'EOF'
+# File 3: exp6_ntasks64.grace_job
+cat > exp6_ntasks64.grace_job << 'EOF'
 #!/bin/bash
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
-#SBATCH --job-name=MPI_Exp6_ntasks4
+#SBATCH --job-name=MPI_Exp6_ntasks64
 #SBATCH --time=0:30:00
-#SBATCH --nodes=16
-#SBATCH --ntasks-per-node=4
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=64
 #SBATCH --mem=8G
-#SBATCH --output=exp6_ntasks4_output.%j
+#SBATCH --output=exp6_ntasks64_output.%j
 
 module load intel
 mpiicx -o compute_pi_mpi.exe compute_pi_mpi.c
 
-echo "=== Experiment 6: ntasks-per-node=4 (16 nodes) ==="
+echo "=== Experiment 6: ntasks-per-node=64 (1 node) ==="
 echo "n = 10000000000, p = 64"
 mpirun -np 64 ./compute_pi_mpi.exe 10000000000
 EOF
 
-# File 4: exp6_ntasks8.grace_job
-cat > exp6_ntasks8.grace_job << 'EOF'
-#!/bin/bash
-#SBATCH --export=NONE
-#SBATCH --get-user-env=L
-#SBATCH --job-name=MPI_Exp6_ntasks8
-#SBATCH --time=0:30:00
-#SBATCH --nodes=8
-#SBATCH --ntasks-per-node=8
-#SBATCH --mem=8G
-#SBATCH --output=exp6_ntasks8_output.%j
-
-module load intel
-mpiicx -o compute_pi_mpi.exe compute_pi_mpi.c
-
-echo "=== Experiment 6: ntasks-per-node=8 (8 nodes) ==="
-echo "n = 10000000000, p = 64"
-mpirun -np 64 ./compute_pi_mpi.exe 10000000000
-EOF
-
-echo "Created 4 separate batch files for Experiment 6"
-echo "Submit them with:"
-echo "  sbatch exp6_ntasks1.grace_job"
-echo "  sbatch exp6_ntasks2.grace_job" 
-echo "  sbatch exp6_ntasks4.grace_job"
-echo "  sbatch exp6_ntasks8.grace_job"
+echo "Created extended Experiment 6 batch files"
+echo ""
+echo "Submit with:"
+echo "  sbatch exp6_ntasks16.grace_job"
+echo "  sbatch exp6_ntasks32.grace_job" 
+echo "  sbatch exp6_ntasks64.grace_job"
+echo ""
+echo "This will test the complete optimization space:"
+echo "  ntasks-per-node = 1,2 → FAILED (too many nodes)"
+echo "  ntasks-per-node = 4   → 16 nodes (working)"
+echo "  ntasks-per-node = 8   → 8 nodes (current optimum)"
+echo "  ntasks-per-node = 16  → 4 nodes (test)"
+echo "  ntasks-per-node = 32  → 2 nodes (test)"
+echo "  ntasks-per-node = 64  → 1 node (test)"
