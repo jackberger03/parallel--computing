@@ -27,11 +27,12 @@ int thread_id[MAX_THREADS];	// User defined id for thread
 pthread_t p_threads[MAX_THREADS];// Threads
 pthread_attr_t attr;		// Thread attributes 
 
-pthread_mutex_t lock_stats;	// Protects sum, sum_of_squares
+pthread_mutex_t lock_stats;	// Protects sum, sum_of_squares, count
 double sum;			// Sum of all elements
 double sum_of_squares;		// Sum of squares of all elements
 double mean;			// Mean of the list
 double standard_deviation;	// Standard deviation of the list
+int count;			// Count of threads that have finished
 
 int list[MAX_LIST_SIZE];	// List of values
 int list_size;			// List size
@@ -59,6 +60,15 @@ void *compute_statistics (void *s) {
     pthread_mutex_lock(&lock_stats);
     sum += my_sum;
     sum_of_squares += my_sum_of_squares;
+    count++;
+    
+    // If this is the last thread, compute final mean and standard deviation
+    if (count == num_threads) {
+        mean = sum / list_size;
+        double variance = (sum_of_squares / list_size) - (mean * mean);
+        standard_deviation = sqrt(variance);
+    }
+    
     pthread_mutex_unlock(&lock_stats);
 
     // Thread exits
@@ -109,9 +119,10 @@ int main(int argc, char *argv[]) {
     double variance = (true_sum_of_squares / list_size) - (true_mean * true_mean);
     true_std_dev = sqrt(variance);
 
-    // Initialize global sums
+    // Initialize global sums and count
     sum = 0.0;
     sum_of_squares = 0.0;
+    count = 0;
 
     // Create threads; each thread executes compute_statistics
     clock_gettime(CLOCK_REALTIME, &start);
@@ -124,24 +135,19 @@ int main(int argc, char *argv[]) {
 	pthread_join(p_threads[i], NULL);
     }
 
-    // Compute mean and standard deviation
-    mean = sum / list_size;
-    variance = (sum_of_squares / list_size) - (mean * mean);
-    standard_deviation = sqrt(variance);
 
     // Compute time taken
     clock_gettime(CLOCK_REALTIME, &stop);
     total_time = (stop.tv_sec-start.tv_sec)
 	+0.000000001*(stop.tv_nsec-start.tv_nsec);
 
-    // Check answer (with small tolerance for floating point errors)
+    // Check answer
     if (fabs(true_mean - mean) > 0.0001 || fabs(true_std_dev - standard_deviation) > 0.0001) {
 	printf("Houston, we have a problem!\n"); 
 	printf("Expected: mean = %8.4f, std dev = %8.4f\n", true_mean, true_std_dev);
 	printf("Got:      mean = %8.4f, std dev = %8.4f\n", mean, standard_deviation);
     }
-
-    // Print results
+    // Print time taken
     printf("Threads = %d, mean = %8.4f, standard_deviation = %8.4f, time (sec) = %8.4f\n", 
 	    num_threads, mean, standard_deviation, total_time);
 
