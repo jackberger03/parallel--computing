@@ -21,14 +21,15 @@ ax1.set_xticks(threads)
 ax1.set_xticklabels(threads, rotation=45)
 
 # Plot 2: Speedup vs Number of threads
-ax2.semilogx(threads, speedup, 'r-o', linewidth=2, markersize=8)
-ax2.semilogx(threads, threads, 'k--', alpha=0.5, label='Ideal speedup')
+ax2.semilogx(threads, speedup, 'r-o', linewidth=2, markersize=8, label='Actual speedup')
+ax2.semilogx(threads[:8], threads[:8], 'k--', alpha=0.5, label='Ideal speedup')
 ax2.set_xlabel('Number of Threads (p)', fontsize=12)
 ax2.set_ylabel('Speedup', fontsize=12)
 ax2.set_title('Speedup vs Number of Threads\n(n = 2×10⁸)', fontsize=14)
 ax2.grid(True, which="both", ls="-", alpha=0.3)
 ax2.set_xticks(threads)
 ax2.set_xticklabels(threads, rotation=45)
+ax2.set_ylim(0, 20)  # Set reasonable y-axis limits
 ax2.legend()
 
 # Add annotations for key points
