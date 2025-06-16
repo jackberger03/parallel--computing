@@ -11,9 +11,6 @@ echo "Thread Count,Execution Time"
 for k in {1..14}
 do
     p=$((2**k))
-    # Run barrier and extract the time value correctly
-    result=$(./barrier.exe $p)
-    # Extract the barrier time (not the timer resolution)
-    time=$(echo "$result" | grep "barrier time" | awk -F'=' '{print $2}' | awk '{print $1}')
+    time=$(./barrier.exe $p | awk '/barrier time/{print $8}')
     echo "$p,$time"
 done
