@@ -1,17 +1,8 @@
 #!/bin/bash
 
 # Script for Problem 5: Running barrier experiments
-# Run on Grace with: sbatch run_barrier_experiments.sh
-
-#SBATCH --job-name=barrier_exp
-#SBATCH --output=barrier_results.txt
-#SBATCH --time=00:30:00
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=8G
-
+# Fixed version to extract correct time values
 module load intel
-
 # Compile the program
 icx -o barrier.exe barrier.c -lpthread -lrt
 
@@ -20,6 +11,9 @@ echo "Thread Count,Execution Time"
 for k in {1..14}
 do
     p=$((2**k))
-    echo -n "$p,"
-    ./barrier.exe $p | awk -F'=' '{print $NF}' | awk '{print $1}'
+    # Run barrier and extract the time value correctly
+    result=$(./barrier.exe $p)
+    # Extract the barrier time (not the timer resolution)
+    time=$(echo "$result" | grep "barrier time" | awk -F'=' '{print $2}' | awk '{print $1}')
+    echo "$p,$time"
 done
