@@ -1,0 +1,5 @@
+ntasks_per_node,nodes,time,status,improvement_percent
+4,16,0.355,Success,11.205602801400701
+8,8,0.2938,Success,26.513256628314153
+16,4,0.3998,Success,0.0
+32,2,0.3533,Success,11.630815407703848

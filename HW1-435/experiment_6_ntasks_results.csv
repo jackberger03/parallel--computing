@@ -1,0 +1,8 @@
+ntasks_per_node,nodes,total_tasks,time,status,tasks_per_core,nodes_efficiency
+1,64,64,,Failed - CPU binding error,1,0.015625
+2,32,64,,Failed - Too many nodes,2,0.03125
+4,16,64,0.355,Success,4,0.0625
+8,8,64,0.2938,Success,8,0.125
+16,4,64,0.3998,Success,16,0.25
+32,2,64,0.3533,Success,32,0.5
+64,1,64,,Failed - Single node limit,64,1.0

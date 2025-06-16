@@ -1,0 +1,50 @@
+#!/bin/bash
+##ENVIRONMENT SETTINGS; CHANGE WITH CAUTION
+#SBATCH --export=NONE            #Do not propagate environment
+#SBATCH --get-user-env=L         #Replicate login environment
+#
+##NECESSARY JOB SPECIFICATIONS
+#SBATCH --job-name=MPI_Exp7      #Set the job name
+#SBATCH --time=1:30:00           #Set the wall clock limit
+#SBATCH --nodes=16               #Request 16 nodes
+#SBATCH --ntasks-per-node=4      #Request 4 tasks/cores per node
+#SBATCH --mem=8G                 #Request 8GB per node 
+#SBATCH --output=mpi_exp7_output.%j #Send stdout/err to output file
+#
+##First Executable Line
+#
+module load intel               # load Intel software stack 
+
+echo "=== Experiment 7: varying n, ntasks-per-node=4 ==="
+
+# Test n = 10^2, 10^4, 10^6, 10^8 with both p=1 and p=64
+
+echo "--- p=1 runs (for speedup calculation) ---"
+
+echo "p=1, n=100"
+mpirun -np 1 ./compute_pi_mpi.exe 100
+
+echo "p=1, n=10000"  
+mpirun -np 1 ./compute_pi_mpi.exe 10000
+
+echo "p=1, n=1000000"
+mpirun -np 1 ./compute_pi_mpi.exe 1000000
+
+echo "p=1, n=100000000"
+mpirun -np 1 ./compute_pi_mpi.exe 100000000
+
+echo "--- p=64 runs ---"
+
+echo "p=64, n=100"
+mpirun -np 64 ./compute_pi_mpi.exe 100
+
+echo "p=64, n=10000"
+mpirun -np 64 ./compute_pi_mpi.exe 10000
+
+echo "p=64, n=1000000" 
+mpirun -np 64 ./compute_pi_mpi.exe 1000000
+
+echo "p=64, n=100000000"
+mpirun -np 64 ./compute_pi_mpi.exe 100000000
+
+echo "=== Experiment 7 Complete ==="
