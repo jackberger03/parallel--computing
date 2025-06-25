@@ -1,0 +1,108 @@
+#!/bin/bash
+##ENVIRONMENT SETTINGS; CHANGE WITH CAUTION
+#SBATCH --export=NONE            #Do not propagate environment
+#SBATCH --get-user-env=L         #Replicate login environment
+#
+##NECESSARY JOB SPECIFICATIONS
+#SBATCH --job-name=Problem5      #Set the job name to "Problem5"
+#SBATCH --time=1:30:00           #Set the wall clock limit to 1hr and 30min
+#SBATCH --nodes=1                #Request 1 node
+#SBATCH --ntasks-per-node=48     #Request all available tasks/cores per node
+#SBATCH --mem=16G                #Request 16GB per node 
+#SBATCH --output=output.%j       #Send stdout/err to "output.[jobID]"
+#
+##OPTIONAL JOB SPECIFICATIONS
+##SBATCH --mail-type=ALL              #Send email on all job events
+##SBATCH --mail-user=email_address    #Send all emails to email_address 
+#
+##First Executable Line
+#
+module load intel                # load Intel software stack
+#
+# Compile both versions
+echo "Compiling original and optimized versions..."
+cp anthill.cpp anthill_orig.cpp
+# Restore original exhaustive search in anthill_orig.cpp (for comparison)
+icpx -O3 -qopenmp -o anthill_orig.exe anthill_orig.cpp
+icpx -O3 -qopenmp -o anthill.exe anthill.cpp
+
+echo "========================================="
+echo "PERFORMANCE COMPARISON TESTS"
+echo "========================================="
+
+# Test 1: Small lawn (64x64)
+echo ""
+echo "Test 1: Small lawn (64x64, anthill at 32,32)"
+echo "Original algorithm:"
+export OMP_NUM_THREADS=$(nproc)
+./anthill_orig.exe 64 32 32 6400
+echo "Optimized algorithm:"
+./anthill.exe 64 32 32 6400
+
+# Test 2: Medium lawn (128x128) 
+echo ""
+echo "Test 2: Medium lawn (128x128, anthill at 64,64)"
+echo "Original algorithm:"
+./anthill_orig.exe 128 64 64 12800
+echo "Optimized algorithm:"
+./anthill.exe 128 64 64 12800
+
+# Test 3: Large lawn (256x256)
+echo ""
+echo "Test 3: Large lawn (256x256, anthill at 128,128)"
+echo "Original algorithm:"
+./anthill_orig.exe 256 128 128 25600
+echo "Optimized algorithm:"
+./anthill.exe 256 128 128 25600
+
+# Test 4: Corner case (anthill near edge)
+echo ""
+echo "Test 4: Corner case (128x128, anthill at 10,10)"
+echo "Original algorithm:"
+./anthill_orig.exe 128 10 10 12800
+echo "Optimized algorithm:"
+./anthill.exe 128 10 10 12800
+
+# Test 5: Different thread counts with CPU monitoring
+echo ""
+echo "Test 5: Thread scaling (128x128, varying OMP_NUM_THREADS)"
+echo "Available processors: $(nproc)"
+echo "CPU info: $(lscpu | grep 'CPU(s):' | head -1)"
+
+for threads in 1 2 4 8 16 32 48; do
+    echo ""
+    echo "With $threads threads:"
+    export OMP_NUM_THREADS=$threads
+    
+    # Run with CPU monitoring
+    echo "  Starting CPU monitor..."
+    top -b -n 2 -d 1 -p $$ > cpu_usage_${threads}threads.log &
+    TOP_PID=$!
+    
+    echo "  Running optimized algorithm..."
+    time ./anthill.exe 256 128 128 51200  # Larger problem for better visibility
+    
+    # Stop monitoring
+    kill $TOP_PID 2>/dev/null
+    
+    # Show CPU usage summary
+    echo "  CPU usage summary:"
+    if [ -f cpu_usage_${threads}threads.log ]; then
+        tail -5 cpu_usage_${threads}threads.log | grep -E "(Cpu|%CPU)" || echo "  Monitor data not available"
+    fi
+done
+
+# Test 6: Verify OpenMP thread creation
+echo ""
+echo "Test 6: OpenMP thread verification (large problem)"
+export OMP_NUM_THREADS=$(nproc)
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+echo "Running large problem to observe thread usage..."
+
+# Use time command to get detailed resource usage
+/usr/bin/time -v ./anthill.exe 512 256 256 102400 2>&1 | grep -E "(User time|System time|Percent of CPU|Maximum resident)"
+
+echo ""
+echo "========================================="
+echo "ALL TESTS COMPLETED"
+echo "========================================="

@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <new>
 #include <omp.h>
-#include <algorithm>
 
 using namespace std;
 
@@ -264,66 +263,33 @@ int main (int argc, char **argv) {
     MyLawn.save_Lawn_to_file(); // Not recommended when size is large
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    // Hierarchical multi-resolution search for the anthill location.
+    // Example Approach #1: Brute force approach
 
     printf("OpenMP verification: Max threads = %d, Available processors = %d\n", 
            omp_get_max_threads(), omp_get_num_procs());
 
-    start_time = omp_get_wtime();
-
-    int step = max(1, MyLawn.m / 8);            // Initial sampling stride (>=1)
-    int min_i = 0, max_i_idx = MyLawn.m - 1;
-    int min_j = 0, max_j_idx = MyLawn.m - 1;
-
-    int best_i = -1, best_j = -1;
-    bool thread_info_printed = false;
-
-    while (true) {
-        double level_best_ants = -1.0;
-        int    level_best_i    = -1;
-        int    level_best_j    = -1;
-
-#pragma omp parallel for collapse(2) schedule(static)
-        for (int i = min_i; i <= max_i_idx; i += step) {
-            for (int j = min_j; j <= max_j_idx; j += step) {
-                double ants = MyLawn.number_of_ants_in_cell(i, j);
-#pragma omp critical
-                {
-                    if (!thread_info_printed) {
-                        printf("Active threads in parallel region: %d\n", omp_get_num_threads());
-                        thread_info_printed = true;
-                    }
-                    if (ants > level_best_ants) {
-                        level_best_ants = ants;
-                        level_best_i    = i;
-                        level_best_j    = j;
-                    }
-                }
-            }
-        }
-
-        best_i = level_best_i;
-        best_j = level_best_j;
-
-        if (step == 1) {
-            break;  // Finest resolution reached
-        }
-
-        // Shrink the search window around the best cell found at this level.
-        min_i = max(0, best_i - step);
-        max_i_idx = min(MyLawn.m - 1, best_i + step);
-        min_j = max(0, best_j - step);
-        max_j_idx = min(MyLawn.m - 1, best_j + step);
-
-        step = max(1, step / 2);
+    start_time = omp_get_wtime(); 
+    volatile int found = 0;
+    volatile int thread_info_printed = 0;
+#pragma omp parallel for default(none) shared(MyLawn, found, thread_info_printed) 
+    for (int i = 0; i < MyLawn.m; i++) {
+	for (int j = 0; j < MyLawn.m; j++) {
+	    if (found == 0) {
+		if (thread_info_printed == 0) {
+		    printf("Active threads in parallel region: %d\n", omp_get_num_threads());
+		    thread_info_printed = 1;
+		}
+		if (MyLawn.guess_anthill_location(i,j) == 1) {
+		    found = 1;
+#pragma omp flush(found)
+		}
+	    }
+	}
     }
+    // #pragma parallel for ends here ...
+    execution_time = omp_get_wtime() - start_time; 
 
-    // Final validation guess.
-    MyLawn.guess_anthill_location(best_i, best_j);
-
-    execution_time = omp_get_wtime() - start_time;
-
-    MyLawn.report_results(execution_time);
+    MyLawn.report_results(execution_time); 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     return 0;
 }

@@ -1,0 +1,112 @@
+Compiling original and optimized versions...
+=========================================
+PERFORMANCE COMPARISON TESTS
+=========================================
+
+Test 1: Small lawn (64x64, anthill at 32,32)
+Original algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 64 x 64, Ants =   1243.5, Queries = 139, Guesses = 1, Penalty = 0.026156, Execution time = 0.000072
+Optimized algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 64 x 64, Ants =   1243.5, Queries = 139, Guesses = 1, Penalty = 0.025762, Execution time = 0.000073
+
+Test 2: Medium lawn (128x128, anthill at 64,64)
+Original algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 128 x 128, Ants =   4780.4, Queries = 164, Guesses = 1, Penalty = 0.096152, Execution time = 0.000091
+Optimized algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 128 x 128, Ants =   4780.4, Queries = 164, Guesses = 1, Penalty = 0.095847, Execution time = 0.000092
+
+Test 3: Large lawn (256x256, anthill at 128,128)
+Original algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 256 x 256, Ants =  16259.0, Queries = 189, Guesses = 1, Penalty = 0.675352, Execution time = 0.000111
+Optimized algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 256 x 256, Ants =  16259.0, Queries = 189, Guesses = 1, Penalty = 0.688029, Execution time = 0.000098
+
+Test 4: Corner case (128x128, anthill at 10,10)
+Original algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 128 x 128, Ants =    673.0, Queries = 164, Guesses = 1, Penalty = 0.095569, Execution time = 0.000088
+Optimized algorithm:
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 128 x 128, Ants =    673.0, Queries = 164, Guesses = 1, Penalty = 0.095992, Execution time = 0.000084
+
+Test 5: Thread scaling (128x128, varying OMP_NUM_THREADS)
+Available processors: 8
+CPU info: CPU(s):              48
+
+With 1 threads:
+  Starting CPU monitor...
+  Running optimized algorithm...
+OpenMP verification: Max threads = 1, Available processors = 8
+Active threads in parallel region: 1
+Size = 256 x 256, Ants =  18989.8, Queries = 189, Guesses = 1, Penalty = 8.838184, Execution time = 0.000025
+
+real	0m8.870s
+user	0m8.840s
+sys	0m0.020s
+  CPU usage summary:
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+
+With 2 threads:
+  Starting CPU monitor...
+  Running optimized algorithm...
+OpenMP verification: Max threads = 2, Available processors = 8
+Active threads in parallel region: 2
+Size = 256 x 256, Ants =  18989.8, Queries = 189, Guesses = 1, Penalty = 4.623314, Execution time = 0.000074
+
+real	0m4.656s
+user	0m9.270s
+sys	0m0.017s
+  CPU usage summary:
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+
+With 4 threads:
+  Starting CPU monitor...
+  Running optimized algorithm...
+OpenMP verification: Max threads = 4, Available processors = 8
+Active threads in parallel region: 4
+Size = 256 x 256, Ants =  18989.8, Queries = 189, Guesses = 1, Penalty = 2.445528, Execution time = 0.000158
+
+real	0m2.766s
+user	0m10.344s
+sys	0m0.032s
+  CPU usage summary:
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+
+With 8 threads:
+  Starting CPU monitor...
+  Running optimized algorithm...
+OpenMP verification: Max threads = 8, Available processors = 8
+Active threads in parallel region: 8
+Size = 256 x 256, Ants =  18989.8, Queries = 189, Guesses = 1, Penalty = 1.331293, Execution time = 0.000106
+
+real	0m1.363s
+user	0m10.772s
+sys	0m0.020s
+  CPU usage summary:
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+
+Test 6: OpenMP thread verification (large problem)
+OMP_NUM_THREADS=8
+Running large problem to observe thread usage...
+	User time (seconds): 81.76
+	System time (seconds): 0.04
+	Percent of CPU this job got: 797%
+	Maximum resident set size (kbytes): 14108
+
+=========================================
+ALL TESTS COMPLETED
+=========================================
