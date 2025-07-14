@@ -19,18 +19,133 @@
 #
 module load intel                # load Intel software stack
 #
-# Compile the program
-echo "Compiling qsort_hypercube..."
+# Create output directory
+mkdir -p results
+
+# Compile both versions
+echo "Compiling qsort_hypercube (ascending order)..."
 mpiicpx -o qsort_hypercube.exe qsort_hypercube_completed.cpp
+
+echo "Compiling qsort_hypercube_descending..."
+mpiicpx -o qsort_hypercube_descending.exe qsort_hypercube_descending.cpp
+
+echo ""
+echo "======================================================================"
+echo "Running test cases for ASCENDING order version"
+echo "======================================================================"
+echo ""
+
+# Create output file for ascending version
+output_file="results/qsort_ascending_tests.txt"
+echo "Hypercube Quicksort Test Results - ASCENDING Order" > $output_file
+echo "=====================================================================" >> $output_file
+echo "Date: $(date)" >> $output_file
+echo "" >> $output_file
+
+# Test case 1: mpirun -np 2 ./qsort_hypercube.exe 4 -1
+echo "Test 1: mpirun -np 2 ./qsort_hypercube.exe 4 -1" | tee -a $output_file
+echo "---------------------------------------------------------------------" >> $output_file
+mpirun -np 2 ./qsort_hypercube.exe 4 -1 2>&1 | tee -a $output_file
+echo "" >> $output_file
+
+# Test case 2: mpirun -np 4 ./qsort_hypercube.exe 4 -2
+echo "Test 2: mpirun -np 4 ./qsort_hypercube.exe 4 -2" | tee -a $output_file
+echo "---------------------------------------------------------------------" >> $output_file
+mpirun -np 4 ./qsort_hypercube.exe 4 -2 2>&1 | tee -a $output_file
+echo "" >> $output_file
+
+# Test case 3: mpirun -np 8 ./qsort_hypercube.exe 4 -1
+echo "Test 3: mpirun -np 8 ./qsort_hypercube.exe 4 -1" | tee -a $output_file
+echo "---------------------------------------------------------------------" >> $output_file
+mpirun -np 8 ./qsort_hypercube.exe 4 -1 2>&1 | tee -a $output_file
+echo "" >> $output_file
+
+# Test case 4: mpirun -np 16 ./qsort_hypercube.exe 4 0
+echo "Test 4: mpirun -np 16 ./qsort_hypercube.exe 4 0" | tee -a $output_file
+echo "---------------------------------------------------------------------" >> $output_file
+mpirun -np 16 ./qsort_hypercube.exe 4 0 2>&1 | tee -a $output_file
+echo "" >> $output_file
+
+# Test case 5: mpirun -np 16 ./qsort_hypercube.exe 20480000 0
+echo "Test 5: mpirun -np 16 ./qsort_hypercube.exe 20480000 0" | tee -a $output_file
+echo "---------------------------------------------------------------------" >> $output_file
+mpirun -np 16 ./qsort_hypercube.exe 20480000 0 2>&1 | tee -a $output_file
+echo "" >> $output_file
+
+echo ""
+echo "======================================================================"
+echo "Running test cases for DESCENDING order version"
+echo "======================================================================"
+echo ""
+
+# Create output file for descending version
+output_file_desc="results/qsort_descending_tests.txt"
+echo "Hypercube Quicksort Test Results - DESCENDING Order" > $output_file_desc
+echo "=====================================================================" >> $output_file_desc
+echo "Date: $(date)" >> $output_file_desc
+echo "" >> $output_file_desc
+
+# Test case 1: mpirun -np 2 ./qsort_hypercube_descending.exe 4 -1
+echo "Test 1: mpirun -np 2 ./qsort_hypercube_descending.exe 4 -1" | tee -a $output_file_desc
+echo "---------------------------------------------------------------------" >> $output_file_desc
+mpirun -np 2 ./qsort_hypercube_descending.exe 4 -1 2>&1 | tee -a $output_file_desc
+echo "" >> $output_file_desc
+
+# Test case 2: mpirun -np 4 ./qsort_hypercube_descending.exe 4 -2
+echo "Test 2: mpirun -np 4 ./qsort_hypercube_descending.exe 4 -2" | tee -a $output_file_desc
+echo "---------------------------------------------------------------------" >> $output_file_desc
+mpirun -np 4 ./qsort_hypercube_descending.exe 4 -2 2>&1 | tee -a $output_file_desc
+echo "" >> $output_file_desc
+
+# Test case 3: mpirun -np 8 ./qsort_hypercube_descending.exe 4 -1
+echo "Test 3: mpirun -np 8 ./qsort_hypercube_descending.exe 4 -1" | tee -a $output_file_desc
+echo "---------------------------------------------------------------------" >> $output_file_desc
+mpirun -np 8 ./qsort_hypercube_descending.exe 4 -1 2>&1 | tee -a $output_file_desc
+echo "" >> $output_file_desc
+
+# Test case 4: mpirun -np 16 ./qsort_hypercube_descending.exe 4 0
+echo "Test 4: mpirun -np 16 ./qsort_hypercube_descending.exe 4 0" | tee -a $output_file_desc
+echo "---------------------------------------------------------------------" >> $output_file_desc
+mpirun -np 16 ./qsort_hypercube_descending.exe 4 0 2>&1 | tee -a $output_file_desc
+echo "" >> $output_file_desc
+
+# Test case 5: mpirun -np 16 ./qsort_hypercube_descending.exe 20480000 0
+echo "Test 5: mpirun -np 16 ./qsort_hypercube_descending.exe 20480000 0" | tee -a $output_file_desc
+echo "---------------------------------------------------------------------" >> $output_file_desc
+mpirun -np 16 ./qsort_hypercube_descending.exe 20480000 0 2>&1 | tee -a $output_file_desc
+echo "" >> $output_file_desc
+
+# Summary
+echo ""
+echo "======================================================================"
+echo "Test Summary"
+echo "======================================================================"
+echo ""
+
+# Count successful tests for ascending version
+success_count_asc=$(grep -c "Congratulations" $output_file)
+echo "Ascending version: $success_count_asc/5 tests passed"
+
+# Count successful tests for descending version
+success_count_desc=$(grep -c "Congratulations" $output_file_desc)
+echo "Descending version: $success_count_desc/5 tests passed"
+
+echo ""
+echo "Test results saved to:"
+echo "  - results/qsort_ascending_tests.txt"
+echo "  - results/qsort_descending_tests.txt"
+
+# Also run the performance experiments for problem 2
+echo ""
+echo "======================================================================"
+echo "Running performance experiments for Problem 2"
+echo "======================================================================"
+echo ""
 
 # Set parameters
 n=20480000  # Local list size per process
 type=0      # Initialization type
 
-# Create output directory
-mkdir -p results
-
-# Run experiments for different process counts
 echo "Running experiments..."
 echo "n = $n, type = $type"
 echo ""
@@ -63,7 +178,7 @@ do
 done
 
 echo ""
-echo "Experiments completed. Results saved to results/qsort_times.csv"
+echo "Performance experiment results saved to results/qsort_times.csv"
 
 # Create Python script for plotting
 cat > plot_results.py << 'EOF'
@@ -75,6 +190,8 @@ import numpy as np
 df = pd.read_csv('results/qsort_times.csv')
 df = df[df['Execution_Time'] != 'FAILED']
 df['Execution_Time'] = pd.to_numeric(df['Execution_Time'])
+df['Process_Count'] = df['Process_Count'].astype(int)
+df['Total_List_Size'] = df['Total_List_Size'].astype(int)
 
 # Calculate speedup and efficiency
 # For speedup calculation, we need T1 for the appropriate problem size
@@ -162,3 +279,5 @@ python plot_results.py
 
 echo ""
 echo "Plots saved to results/qsort_performance.png and results/qsort_performance.pdf"
+echo ""
+echo "All tests completed!"
