@@ -1,0 +1,346 @@
+// ---------------------------------------------------------------------------- 
+// CUDA code to compute minimun distance between n points
+//
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+
+#define MAX_POINTS 1048576
+
+#define ERR_MALLOC 1
+#define ERR_MEMCPY 2
+#define ERR_KERNEL 3
+
+// ---------------------------------------------------------------------------- 
+// Kernel Function to compute distance between all pairs of points
+// Input: 
+//	X: X[i] = x-coordinate of the ith point
+//	Y: Y[i] = y-coordinate of the ith point
+//	n: number of points
+// Output: 
+//	D: D[0] = minimum distance
+//
+__global__ void minimum_distance(float * X, float * Y, volatile float * D, int n) {
+    extern __shared__ float shared_data[];
+    
+    int tid = threadIdx.x;
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Shared memory layout: first half for min distances, second half for X and Y coords
+    float* shared_min = shared_data;
+    float* shared_X = &shared_data[blockDim.x];
+    float* shared_Y = &shared_data[blockDim.x + blockDim.x];
+    
+    // Initialize minimum distance to a large value
+    float local_min = 1e30f;
+    
+    // Each thread computes minimum distance from its assigned point to all others
+    if (gid < n) {
+        float xi = X[gid];
+        float yi = Y[gid];
+        
+        // Process points in tiles for better memory access pattern
+        for (int tile = 0; tile < (n + blockDim.x - 1) / blockDim.x; tile++) {
+            // Cooperatively load tile of points into shared memory
+            int idx = tile * blockDim.x + tid;
+            if (idx < n) {
+                shared_X[tid] = X[idx];
+                shared_Y[tid] = Y[idx];
+            }
+            __syncthreads();
+            
+            // Compute distances to points in this tile
+            int tile_size = min(blockDim.x, n - tile * blockDim.x);
+            for (int j = 0; j < tile_size; j++) {
+                int global_j = tile * blockDim.x + j;
+                if (global_j != gid) {  // Don't compute distance to self
+                    float dx = shared_X[j] - xi;
+                    float dy = shared_Y[j] - yi;
+                    float dist = sqrtf(dx * dx + dy * dy);
+                    if (dist < local_min) {
+                        local_min = dist;
+                    }
+                }
+            }
+            __syncthreads();
+        }
+    }
+    
+    // Store local minimum in shared memory for reduction
+    shared_min[tid] = local_min;
+    __syncthreads();
+    
+    // Parallel reduction within block to find block minimum
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride && tid + stride < blockDim.x) {
+            if (shared_min[tid + stride] < shared_min[tid]) {
+                shared_min[tid] = shared_min[tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    
+    // First thread in block writes block minimum to global memory
+    if (tid == 0) {
+        D[blockIdx.x] = shared_min[0];
+    }
+} 
+
+// ---------------------------------------------------------------------------- 
+// Reduction kernel to find minimum among block results
+__global__ void reduce_minimum(volatile float * D, int n) {
+    extern __shared__ float shared_min[];
+    
+    int tid = threadIdx.x;
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Load data into shared memory
+    shared_min[tid] = (gid < n) ? D[gid] : 1e30f;
+    __syncthreads();
+    
+    // Parallel reduction
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride && tid + stride < blockDim.x) {
+            if (shared_min[tid + stride] < shared_min[tid]) {
+                shared_min[tid] = shared_min[tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    
+    // Write result
+    if (tid == 0) {
+        D[0] = shared_min[0];
+    }
+}
+
+// ---------------------------------------------------------------------------- 
+// Host function to compute minimum distance between points
+// Input:
+//	X: X[i] = x-coordinate of the ith point
+//	Y: Y[i] = y-coordinate of the ith point
+//	n: number of points
+// Output: 
+//	D: minimum distance
+//
+float minimum_distance_host(float * X, float * Y, int n) {
+    float dx, dy, Dij, min_distance, min_distance_i;
+    int i, j;
+    dx = X[1]-X[0];
+    dy = Y[1]-Y[0];
+    min_distance = sqrtf(dx*dx+dy*dy);
+    for (i = 0; i < n-1; i++) {
+	for (j = i+1; j < i+2; j++) {
+	    dx = X[j]-X[i];
+	    dy = Y[j]-Y[i];
+	    min_distance_i = sqrtf(dx*dx+dy*dy);
+	}
+	for (j = i+1; j < n; j++) {
+	    dx = X[j]-X[i];
+	    dy = Y[j]-Y[i];
+	    Dij = sqrtf(dx*dx+dy*dy);
+	    if (min_distance_i > Dij) min_distance_i = Dij;
+	}
+	if (min_distance > min_distance_i) min_distance = min_distance_i;
+    }
+    return min_distance;
+}
+// ---------------------------------------------------------------------------- 
+// Print device properties
+void print_device_properties() {
+    int i, deviceCount;
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceCount(&deviceCount);
+    printf("------------------------------------------------------------\n");
+    printf("Number of GPU devices found = %d\n", deviceCount);
+    for ( i = 0; i < deviceCount; ++i ) {
+	cudaGetDeviceProperties(&deviceProp, i);
+	printf("[Device: %1d] Compute Capability %d.%d.\n", i, deviceProp.major, deviceProp.minor);
+	printf(" ... multiprocessor count  = %d\n", deviceProp.multiProcessorCount); 
+	printf(" ... max threads per multiprocessor = %d\n", deviceProp.maxThreadsPerMultiProcessor); 
+	printf(" ... max threads per block = %d\n", deviceProp.maxThreadsPerBlock); 
+	printf(" ... max block dimension   = %d, %d, %d (along x, y, z)\n",
+		deviceProp.maxThreadsDim[0], deviceProp.maxThreadsDim[1], deviceProp.maxThreadsDim[2]); 
+	printf(" ... max grid size         = %d, %d, %d (along x, y, z)\n",
+		deviceProp.maxGridSize[0], deviceProp.maxGridSize[1], deviceProp.maxGridSize[2]); 
+	printf(" ... warp size             = %d\n", deviceProp.warpSize); 
+	printf(" ... clock rate            = %d MHz\n", deviceProp.clockRate/1000); 
+    }
+    printf("------------------------------------------------------------\n");
+}
+// ---------------------------------------------------------------------------- 
+// CUDA errors
+void check_error(cudaError_t err, int type) {
+    if (err != cudaSuccess) {
+        switch(type) {
+            case ERR_MALLOC:
+                fprintf(stderr, "Failed cudaMalloc (error code %s)!\n", cudaGetErrorString(err));
+                break;
+            case ERR_MEMCPY:
+                fprintf(stderr, "Failed cudaMemcpy (error code %s)!\n", cudaGetErrorString(err));
+                break;
+            case ERR_KERNEL:
+                fprintf(stderr, "Failed kernel launch (error code %s)!\n", cudaGetErrorString(err));
+                break;
+        }
+        exit(0);
+    }
+}
+// ---------------------------------------------------------------------------- 
+// Main program - initializes points and computes minimum distance 
+// between the points
+//
+int main(int argc, char* argv[]) {
+
+    // Host Data
+    float * hVx;		// host x-coordinate array
+    float * hVy;		// host y-coordinate array
+    float hmin_dist;		// minimum value on host
+
+    // Device Data
+    float * dVx;		// device x-coordinate array
+    float * dVy;		// device x-coordinate array
+    float * dmin_dist;		// minimum value on device
+
+    // Device parameters
+    int MAX_BLOCK_SIZE;		// Maximum number of threads allowed on the device
+    int blocks;			// Number of blocks in grid
+    int threads_per_block;	// Number of threads per block
+
+    // Timing variables
+    cudaEvent_t start, stop;		// GPU timing variables
+    struct timespec cpu_start, cpu_stop; // CPU timing variables
+    float time_array[10]; 
+
+    // Other variables
+    cudaError_t err = cudaSuccess;
+    int i, size, num_points; 
+    float min_distance, sqrtn;
+    int seed = 0;
+
+    // Print device properties
+    print_device_properties(); 
+
+    // Get device information and set device to use
+    int deviceCount;
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceCount(&deviceCount);
+    if (deviceCount > 0) {
+	cudaSetDevice(0); 
+	cudaGetDeviceProperties(&deviceProp, 0);
+	MAX_BLOCK_SIZE = deviceProp.maxThreadsPerBlock;
+    } else {
+	printf("Warning: No GPU device found ... results may be incorrect\n");
+    }
+
+    // Timing initializations
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    // Check input
+    if (argc != 2) {
+	printf("Use: %s <number of points>\n", argv[0]);  
+	exit(0);
+    }
+    if ((num_points = atoi(argv[argc-1])) < 2) {
+	printf("Minimum number of points allowed: 2\n");
+	exit(0);
+    } 
+    if ((num_points = atoi(argv[argc-1])) > MAX_POINTS) {
+	printf("Maximum number of points allowed: %d\n", MAX_POINTS);
+	exit(0);
+    } 
+
+    // Allocate host coordinate arrays 
+    size = num_points * sizeof(float); 
+    hVx = (float *) malloc(size); 
+    hVy = (float *) malloc(size);
+
+    // Initialize points
+    srand48(seed);
+    sqrtn = (float) sqrt(num_points); 
+    for (i = 0; i < num_points; i++) {
+	hVx[i] = sqrtn * (float)drand48();
+	hVy[i] = sqrtn * (float)drand48();
+    }
+
+    // Allocate device coordinate arrays
+    err = cudaMalloc(&dVx, size); check_error(err, ERR_MALLOC);
+    err = cudaMalloc(&dVy, size); check_error(err, ERR_MALLOC);
+    err = cudaMalloc(&dmin_dist, size); check_error(err, ERR_MALLOC);
+
+    // Copy coordinate arrays from host memory to device memory 
+    cudaEventRecord( start, 0 ); 
+
+    err = cudaMemcpy(dVx, hVx, size, cudaMemcpyHostToDevice); check_error(err, ERR_MEMCPY);
+    err = cudaMemcpy(dVy, hVy, size, cudaMemcpyHostToDevice); check_error(err, ERR_MEMCPY);
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&(time_array[0]), start, stop);
+
+    // Invoke kernel
+    cudaEventRecord( start, 0 ); 
+
+    // Configure grid and block dimensions
+    threads_per_block = (num_points < MAX_BLOCK_SIZE) ? num_points : MAX_BLOCK_SIZE;
+    blocks = (num_points + threads_per_block - 1) / threads_per_block;
+    
+    // Calculate shared memory size needed
+    int shared_mem_size = threads_per_block * sizeof(float) * 3; // For min values, X coords, and Y coords
+    
+    // Launch first kernel to compute minimum distances per block
+    minimum_distance<<<blocks, threads_per_block, shared_mem_size>>>(dVx, dVy, dmin_dist, num_points);
+    
+    // If we have multiple blocks, we need a reduction step
+    if (blocks > 1) {
+        // Launch reduction kernel with single block to find global minimum
+        int reduction_threads = (blocks < MAX_BLOCK_SIZE) ? blocks : MAX_BLOCK_SIZE;
+        reduce_minimum<<<1, reduction_threads, reduction_threads * sizeof(float)>>>(dmin_dist, blocks);
+    }
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&(time_array[1]), start, stop);
+
+	err = cudaGetLastError(); check_error(err, ERR_KERNEL);
+
+    // Copy result from device memory to host memory 
+    cudaEventRecord( start, 0 ); 
+
+    err = cudaMemcpy(&hmin_dist, dmin_dist, sizeof(float), cudaMemcpyDeviceToHost); check_error(err, ERR_MEMCPY);
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&(time_array[2]), start, stop);
+
+    // Compute minimum distance on host to check device computation
+    clock_gettime(CLOCK_REALTIME, &cpu_start);
+
+    min_distance = minimum_distance_host(hVx, hVy, num_points); 
+
+    clock_gettime(CLOCK_REALTIME, &cpu_stop);
+    time_array[3] = 1000*((cpu_stop.tv_sec-cpu_start.tv_sec)                    
+	    +0.000000001*(cpu_stop.tv_nsec-cpu_start.tv_nsec));
+
+    // Print results
+    printf("Number of Points    = %d\n", num_points); 
+    printf("GPU Host-to-device  = %f ms \n", time_array[0]);
+    printf("GPU Device-to-host  = %f ms \n", time_array[2]);
+    printf("GPU execution time  = %f ms \n", time_array[1]);
+    printf("CPU execution time  = %f ms\n", time_array[3]);
+    printf("Min. distance (GPU) = %e\n", hmin_dist);
+    printf("Min. distance (CPU) = %e\n", min_distance);
+    printf("Relative error      = %e\n", fabs(min_distance-hmin_dist)/min_distance);
+
+
+    // Free device memory 
+    cudaFree(dVx);
+    cudaFree(dVy);
+    cudaFree(dmin_dist);
+
+    // Free host memory 
+    free(hVx);
+    free(hVy);
+}  
